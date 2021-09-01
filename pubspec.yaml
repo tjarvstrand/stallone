@@ -1,0 +1,14 @@
+name: stallone
+description: Yet another actor implementation.
+version: 0.1.0
+homepage:
+
+environment:
+  sdk: ">=2.13.0 <3.0.0"
+
+dependencies:
+  meta: ^1.7.0
+  rxdart: ^0.27.1
+
+dev_dependencies:
+  test: ^1.17.11
