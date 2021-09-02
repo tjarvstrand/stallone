@@ -1,4 +1,10 @@
-part of stallone;
+import 'dart:async';
+import 'dart:isolate';
+
+import 'package:meta/meta.dart';
+import 'package:rxdart/transformers.dart';
+
+import 'actor.dart';
 
 Future<void> _isolateMain(
   _ActorInit init,
@@ -7,24 +13,21 @@ Future<void> _isolateMain(
   final sendPort = init.sendPort;
   final receivePort = ReceivePort();
   sendPort.send(receivePort.sendPort);
-  await actor._initialize();
+  await actor.init();
   sendPort.send(#initComplete);
-  late StreamSubscription sub;
-  sub = receivePort.listen((message) async {
-    if (message is Message) {
-      await actor._handleTell(message.payload);
-    } else if (message is Request) {
-      await actor._handleAsk(message.payload, (m) {
-        message._responsePort.send(Response(m));
+  await for (final message in receivePort) {
+    if (message is _Message) {
+      await actor.tell(message.payload);
+    } else if (message is _Request) {
+      await actor.ask(message.payload, (m) {
+        message._responsePort.send(_Response(m));
       });
     } else if (message == #stop) {
-      await sub.cancel();
-      await actor._stop();
-      // No need to send a response here since the ActorRef will wait for the Isolate to terminate.
+      await actor.stop();
     } else {
       print("Received unsupported message type: ${message.runtimeType}");
     }
-  });
+  }
 }
 
 class _ActorInit<Req, Resp> {
@@ -34,23 +37,47 @@ class _ActorInit<Req, Resp> {
   _ActorInit(this.actor, this.sendPort);
 }
 
-abstract class _Message<T> {
+abstract class _MessageBase<T> {
   final T payload;
 
-  _Message(this.payload);
+  _MessageBase(this.payload);
 }
 
-class Message<T> extends _Message<T> {
-  Message(T payload) : super(payload);
+class _Message<T> extends _MessageBase<T> {
+  _Message(T payload) : super(payload);
 }
 
-class Request<T, R> extends _Message<T> {
+class _Request<T, R> extends _MessageBase<T> {
   final SendPort _responsePort;
-  Request(T payload, this._responsePort) : super(payload);
+  _Request(T payload, this._responsePort) : super(payload);
 }
 
-class Response<T> extends _Message<T> {
-  Response(T payload) : super(payload);
+class _Response<T> extends _MessageBase<T> {
+  _Response(T payload) : super(payload);
+}
+
+class IsolateActorMonitor implements ActorMonitor {
+  final Isolate _isolate;
+  final ReceivePort _port;
+  @override
+  late Future<ActorMonitorResult> future;
+
+  IsolateActorMonitor._(this._isolate) : _port = ReceivePort() {
+    _isolate
+      ..addErrorListener(_port.sendPort)
+      ..addOnExitListener(_port.sendPort);
+
+    future = _port.map((event) => event is List ? Failed(event.first) : Stopped()).first;
+  }
+
+  @override
+  Future<void> cancel() {
+    _isolate
+      ..removeOnExitListener(_port.sendPort)
+      ..removeErrorListener(_port.sendPort);
+    _port.sendPort.send(Cancelled());
+    return Future.value(null);
+  }
 }
 
 class IsolateActorRef<Req, Resp> extends ActorRef<Req, Resp> {
@@ -59,7 +86,8 @@ class IsolateActorRef<Req, Resp> extends ActorRef<Req, Resp> {
   final SendPort _requestPort;
   final Isolate _isolate;
 
-  static Future<IsolateActorRef<Req, Resp>> _start<Req, Resp>(Actor<Req, Resp, dynamic> actor, bool awaitInit) async {
+  @internal
+  static Future<IsolateActorRef<Req, Resp>> start<Req, Resp>(Actor<Req, Resp, dynamic> actor, bool awaitInit) async {
     final responsePort = ReceivePort();
     final stream = responsePort.asBroadcastStream();
     final isolate = await Isolate.spawn(
@@ -87,19 +115,23 @@ class IsolateActorRef<Req, Resp> extends ActorRef<Req, Resp> {
   );
 
   @override
-  void tell(Req message) => _requestPort.send(Message(message));
+  void tell(Req message) => _requestPort.send(_Message(message));
 
   @override
-  FutureOr<Resp> ask(Req message) async {
-    _requestPort.send(Request(message, _responsePort.sendPort));
-    return (await _responseStream.whereType<Response>().first).payload as Resp;
+  Future<Resp> ask(Req message) async {
+    _requestPort.send(_Request(message, _responsePort.sendPort));
+    return (await _responseStream.whereType<_Response>().first).payload as Resp;
   }
 
   @override
-  FutureOr<void> stop() async {
-    _isolate.addOnExitListener(_responsePort.sendPort, response: "stopped");
+  IsolateActorMonitor monitor() => IsolateActorMonitor._(_isolate);
+
+  @override
+  Future<void> stop() async {
+    final port = ReceivePort();
+    _isolate.addOnExitListener(port.sendPort);
     _requestPort.send(#stop);
-    await _responseStream.firstWhere((message) => message == "stopped");
+    await port.first;
     _responsePort.close();
   }
 }

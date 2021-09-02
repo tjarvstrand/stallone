@@ -1,4 +1,6 @@
-part of stallone;
+import 'actor.dart';
+import 'isolate_actor_ref.dart';
+import 'local_actor_ref.dart';
 
 class ActorSystem {
   Future<ActorRef> start<Req, Resp>(
@@ -6,5 +8,5 @@ class ActorSystem {
     bool awaitInit = true,
     bool threadLocal = false,
   }) =>
-      threadLocal ? LocalActorRef._start(actor, awaitInit) : IsolateActorRef._start(actor, awaitInit);
+      threadLocal ? LocalActorRef.start(actor, awaitInit) : IsolateActorRef.start(actor, awaitInit);
 }
