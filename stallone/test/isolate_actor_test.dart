@@ -1,15 +1,14 @@
-import 'package:stallone/stallone.dart';
+import 'package:stallone/src/actor_monitor.dart';
+import 'package:stallone/src/isolate_actor/isolate_actor_ref.dart';
 import 'package:test/test.dart';
 
+import 'actors/addition_actor.dart';
 import 'actors/crashing_actor.dart';
-import 'actors/int_actor.dart';
 import 'test_util.dart';
 
 void main() {
-  final system = ActorSystem();
-
   test('Ask and tell work as expected', () async {
-    final ref = await system.start(IntActor());
+    final ref = await IsolateActorRef.start(AdditionActor());
     expect(await ref.ask(1), 1);
     expect(await ref.ask(1), 2);
     ref.tell(0);
@@ -17,14 +16,14 @@ void main() {
   });
 
   test('Stop stops the actor', () async {
-    final ref = await system.start(IntActor());
+    final ref = await IsolateActorRef.start(AdditionActor());
     final monitor = ref.monitor();
     await ref.stop();
-    await expectLater(monitor.future, Stopped());
+    expect(await monitor.future, (r) => r is Done);
   });
 
   test('Crashing stops the actor', () async {
-    final ref = await system.start(CrashingActor());
+    final ref = await IsolateActorRef.start(CrashingActor());
     final monitor = ref.monitor();
     ref.tell(Exception());
     expect(await monitor.future, (r) => r is Failed);

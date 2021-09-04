@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:stallone/stallone.dart';
 
-class IntActor extends Actor<int, int, int> {
-  IntActor([int initial = 0]) : super(initial);
+class AdditionActor extends Actor<int, int, int> {
+  AdditionActor([int initial = 0]) : super(initial);
 
   @override
-  Future<int> handleTell(int state, int message) => Future.value(message);
+  Future<int> handleTell(int state, int message) async => message;
 
   @override
   Future<int> handleAsk(int state, int message, void Function(int) respond) async {

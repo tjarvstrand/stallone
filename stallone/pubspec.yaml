@@ -7,9 +7,9 @@ environment:
   sdk: ">=2.13.0 <3.0.0"
 
 dependencies:
-  equatable: ^2.0.3
-  meta: ^1.7.0
+  meta:
+  pedantic: # Used until dart 2.14 FutureExtensions
   rxdart: ^0.27.1
 
 dev_dependencies:
-  test: ^1.17.11
+  test:

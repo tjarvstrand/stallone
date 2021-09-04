@@ -1,32 +1,32 @@
-import 'package:stallone/stallone.dart';
+import 'package:pedantic/pedantic.dart';
+import 'package:stallone/src/actor_monitor.dart';
+import 'package:stallone/src/local_actor/local_actor_ref.dart';
 import 'package:test/test.dart';
 
+import 'actors/addition_actor.dart';
 import 'actors/crashing_actor.dart';
-import 'actors/int_actor.dart';
 import 'test_util.dart';
 
 void main() {
-  final system = ActorSystem();
-
   test('Ask and tell work as expected', () async {
-    final ref = await system.start(IntActor(), threadLocal: true);
+    final ref = await LocalActorRef.start(AdditionActor());
     expect(await ref.ask(1), 1);
     expect(await ref.ask(1), 2);
-    ref.tell(0);
+    unawaited(ref.tell(0));
     await eventually(() async => expect(await ref.ask(0), 0));
   });
 
   test('Stop stops the actor', () async {
-    final ref = await system.start(IntActor(), threadLocal: true);
+    final ref = await LocalActorRef.start(AdditionActor());
     final monitor = ref.monitor();
     await ref.stop();
-    expect(await monitor.future, Stopped());
+    expect(await monitor.future, (r) => r is Done);
   });
 
   test('Crashing stops the actor', () async {
-    final ref = await system.start(CrashingActor(), threadLocal: true);
+    final ref = await LocalActorRef.start(CrashingActor());
     final monitor = ref.monitor();
-    ref.tell(Exception());
+    unawaited(ref.tell(Exception()));
     expect(await monitor.future, (r) => r is Failed);
   });
 }
