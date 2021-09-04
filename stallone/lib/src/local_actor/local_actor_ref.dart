@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:pedantic/pedantic.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:stallone/stallone.dart';
 
 import '../actor.dart';
@@ -22,21 +23,33 @@ class LocalActorStop extends Stop {
 
 class LocalActorStopped {}
 
-class LocalActorRef<Req, Resp> extends ActorRef<Req, Resp> {
+class LocalActorRef<Req, Resp, State> extends ActorRef<Req, Resp, State> {
   int _nextRequestId = 0;
   final StreamController<Message<Req>> _messageController;
   final StreamController<Response<Resp>> _messageResponseController = StreamController.broadcast();
   final StreamController _controlMessageController;
   final Completer<ActorMonitorResult> _completer;
   final Actor<Req, Resp, dynamic> _actor;
+  final BehaviorSubject<State> _stateStreamController;
 
-  LocalActorRef(this._actor, this._messageController, this._controlMessageController, this._completer);
+  LocalActorRef(
+    this._actor,
+    this._messageController,
+    this._controlMessageController,
+    this._stateStreamController,
+    this._completer,
+  );
 
-  static Future<LocalActorRef<Req, Resp>> start<Req, Resp>(
-    Actor<Req, Resp, dynamic> actor, [
+  @override
+  ValueStream<State> get stream => _stateStreamController.stream;
+
+  static Future<LocalActorRef<Req, Resp, State>> start<Req, Resp, State>(
+    Actor<Req, Resp, State> actor, [
     bool awaitInit = true,
   ]) async {
-    final initF = actor.init();
+    // ignore: close_sinks
+    final stateStreamController = BehaviorSubject<State>();
+    final initF = actor.init(stateStreamController.add);
     if (awaitInit) await initF;
     final messageController = StreamController<Message<Req>>.broadcast();
     final controlMessageController = StreamController.broadcast();
@@ -49,7 +62,7 @@ class LocalActorRef<Req, Resp> extends ActorRef<Req, Resp> {
       await messageController.close();
       await controlMessageController.close();
     }));
-    final ref = LocalActorRef(actor, messageController, controlMessageController, completer);
+    final ref = LocalActorRef(actor, messageController, controlMessageController, stateStreamController, completer);
     unawaited(ref._run());
     return ref;
   }

@@ -32,34 +32,40 @@ abstract class Stop {
   void respond();
 }
 
-abstract class ActorRef<Req, Resp> {
+abstract class ActorRef<Req, Resp, State> {
   void tell(Req message);
   Future<Resp> ask(Req message);
   Future<void> stop();
   ActorMonitor monitor();
+  ValueStream<State> get stream;
 }
 
 abstract class Actor<Req, Resp, State> {
-  State _state;
+  late void Function(State) _publishState;
+  State __state;
+  State get _state => __state;
+  set _state(State newState) {
+    final oldState = _state;
+    __state = newState;
+    if (oldState != _state) _publishState(_state);
+  }
+
+  @internal
   final Logger logger = DefaultLogger();
-  Actor(this._state);
+
+  Actor(this.__state);
 
   @internal
   Future<void> run(Stream messageStream, Stream controlStream) async {
     await for (final message in Rx.merge([messageStream, controlStream])) {
       try {
         if (message is Stop) {
-          await handleStop(_state);
-          message.respond();
+          await stop(message);
           break;
         } else if (message is Event) {
           _state = await handleTell(_state, message.payload);
         } else if (message is Request) {
-          _state = await handleAsk(
-            _state,
-            message.payload,
-            (m) => message.respond(Response(message.id, m)),
-          );
+          _state = await handleAsk(_state, message.payload, (m) => message.respond(Response<Resp>(message.id, m)));
         } else {
           await handleInfo(_state, message);
         }
@@ -72,7 +78,19 @@ abstract class Actor<Req, Resp, State> {
   }
 
   @internal
-  Future<void> init() async => _state = await handleInit(_state);
+  Future<void> init(void Function(State) publishState) async {
+    _publishState = publishState;
+    // Ensure that we populate the ValueStream by force publishing state after initialization even if it's the same as
+    // the initial state.
+    __state = await handleInit(_state);
+    _publishState(_state);
+  }
+
+  @internal
+  Future<void> stop(Stop message) async {
+    await handleStop(_state);
+    message.respond();
+  }
 
   @protected
   Future<State> handleTell(State state, Req message) async => state;
@@ -88,6 +106,6 @@ abstract class Actor<Req, Resp, State> {
 
   @protected
   void onError(dynamic error, StackTrace? stacktrace) {
-    logger.severe("Actor died");
+    logger.severe("Actor died", error, stacktrace);
   }
 }
