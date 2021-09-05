@@ -6,6 +6,7 @@ import 'package:rxdart/transformers.dart';
 import 'package:stream_channel/isolate_channel.dart';
 
 import '../actor.dart';
+import '../messages.dart';
 import '../util/request_channel.dart';
 import 'isolate_actor_monitor.dart';
 

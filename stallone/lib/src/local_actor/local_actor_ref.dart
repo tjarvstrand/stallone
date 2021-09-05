@@ -6,6 +6,7 @@ import 'package:stream_channel/stream_channel.dart';
 
 import '../actor.dart';
 import '../actor_monitor.dart';
+import '../messages.dart';
 import '../util/request_channel.dart';
 import 'local_actor_monitor.dart';
 

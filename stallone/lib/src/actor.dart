@@ -2,20 +2,12 @@ import 'dart:async';
 
 import 'package:meta/meta.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:stallone/src/mailbox.dart';
 
 import 'actor_monitor.dart';
 import 'logger.dart';
+import 'messages.dart';
 import 'util/request_channel.dart';
-
-abstract class ControlMessage {}
-
-abstract class ControlResponse {}
-
-class Stop extends ControlMessage {}
-
-class Stopped extends ControlResponse {}
-
-class InitComplete extends ControlResponse {}
 
 abstract class ActorRef<Req, Resp, State> {
   void tell(Req message);
@@ -37,27 +29,25 @@ abstract class Actor<Req, Resp, State> {
     if (oldState != _state) _stateSink.add(_state);
   }
 
-  final _selfController = StreamController<Req>();
   @protected
-  EventSink<Req> get self => _selfController;
+  void self(Req request) => _mailbox.addOther(Event(request));
 
   @internal
   final Logger logger = PrintLogger();
+
+  late MailBox _mailbox;
 
   Actor(this.__state);
 
   @internal
   Future<void> run() => _runSafe(() async {
-        await for (final message in Rx.merge([
-          _controlChannel.stream,
-          _messageChannel.stream,
-          _selfController.stream.map((msg) => Event(msg)),
-        ])) {
+        await Future.doWhile(() async {
+          final message = await _mailbox.next;
           logger.finest("actor received message: $message");
           if (message is Request && message.payload is Stop) {
             await handleStop(_state);
             _controlChannel.respond(message.id, Stopped());
-            break;
+            return false;
           } else if (message is Request) {
             _state = await handleAsk(_state, message.payload, (m) => _messageChannel.respond(message.id, m));
           } else if (message is Event) {
@@ -66,7 +56,8 @@ abstract class Actor<Req, Resp, State> {
             await handleOther(_state, message);
           }
           logger.finest("actor handled message");
-        }
+          return true;
+        });
         logger.finer("actor done");
         _close();
       });
@@ -86,7 +77,7 @@ abstract class Actor<Req, Resp, State> {
     _stateSink.close();
     _controlChannel.close();
     _messageChannel.close();
-    _selfController.close();
+    _mailbox.close();
   }
 
   @internal
@@ -99,11 +90,18 @@ abstract class Actor<Req, Resp, State> {
         _controlChannel = controlChannel;
         _messageChannel = messageChannel;
         _stateSink = sink;
+        _mailbox = DefaultMailBox(
+          _controlChannel.stream,
+          _messageChannel.stream,
+        );
         // Ensure that we populate the state ValueStream
         _stateSink.add(_state);
         _state = await handleInit(_state);
         controlChannel.send(InitComplete());
       });
+
+  // Sends a low priority stop message.
+  void stop() => _mailbox.addControl(Stop());
 
   @protected
   Future<State> handleTell(State state, Req message) async => state;

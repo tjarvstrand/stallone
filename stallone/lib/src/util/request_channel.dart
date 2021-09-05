@@ -27,7 +27,6 @@ class ResponseChannel<Req, Resp> {
 
   ResponseChannel(this._channel) {
     stream = _channel.stream.asBroadcastStream().map((event) => event as Event<Req>);
-    //.cast<Request<Req>>();
   }
 
   void send(Resp payload) => _channel.sink.add(Response(-1, payload));
