@@ -9,7 +9,8 @@ environment:
 dependencies:
   meta:
   pedantic: # Used until dart 2.14 FutureExtensions
-  rxdart: ^0.27.1
+  rxdart: ^0.27.2
+  stream_channel: ^2.1.0
 
 dev_dependencies:
   test:

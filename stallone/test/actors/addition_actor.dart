@@ -7,7 +7,7 @@ class AdditionActor extends Actor<int, int, int> {
   AdditionActor([int initial = 0]) : super(initial);
 
   @override
-  // Logger get logger => DefaultLogger(LogLevel.info);
+  // Logger get logger => DefaultLogger(LogLevel.finest);
   Logger get logger => IgnoreLogger();
 
   @override

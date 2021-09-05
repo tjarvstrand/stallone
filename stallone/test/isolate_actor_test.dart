@@ -10,7 +10,7 @@ void main() {
   test('Ask and tell work as expected', () async {
     final states = <int>[];
     final ref = await IsolateActorRef.start(AdditionActor());
-    ref.stream.listen(states.add);
+    ref.state.listen(states.add);
     expect(await ref.ask(1), 1);
     expect(await ref.ask(1), 2);
     ref.tell(0);

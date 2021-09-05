@@ -5,92 +5,96 @@ import 'package:rxdart/rxdart.dart';
 
 import 'actor_monitor.dart';
 import 'logger.dart';
+import 'util/request_channel.dart';
 
-abstract class Message<T> {
-  final T payload;
+abstract class ControlMessage {}
 
-  Message(this.payload);
-}
+abstract class ControlResponse {}
 
-class Event<T> extends Message<T> {
-  Event(T payload) : super(payload);
-}
+class Stop extends ControlMessage {}
 
-abstract class Request<T, R> extends Message<T> {
-  final int id;
-  Request(this.id, T payload) : super(payload);
-  void respond(Response<R> response);
-}
+class Stopped extends ControlResponse {}
 
-class Response<T> extends Message<T> {
-  int requestId;
-  Response(this.requestId, T payload) : super(payload);
-}
-
-// ignore: one_member_abstracts, can't send closures over SendPorts
-abstract class Stop {
-  void respond();
-}
+class InitComplete extends ControlResponse {}
 
 abstract class ActorRef<Req, Resp, State> {
   void tell(Req message);
   Future<Resp> ask(Req message);
   Future<void> stop();
   ActorMonitor monitor();
-  ValueStream<State> get stream;
+  ValueStream<State> get state;
 }
 
 abstract class Actor<Req, Resp, State> {
-  late void Function(State) _publishState;
+  late ResponseChannel _messageChannel;
+  late ResponseChannel<ControlMessage, ControlResponse> _controlChannel;
+  late EventSink _stateSink;
   State __state;
   State get _state => __state;
   set _state(State newState) {
     final oldState = _state;
     __state = newState;
-    if (oldState != _state) _publishState(_state);
+    if (oldState != _state) _stateSink.add(_state);
   }
 
   @internal
-  final Logger logger = DefaultLogger();
+  final Logger logger = PrintLogger();
 
   Actor(this.__state);
 
   @internal
-  Future<void> run(Stream messageStream, Stream controlStream) async {
-    await for (final message in Rx.merge([messageStream, controlStream])) {
-      try {
-        if (message is Stop) {
-          await stop(message);
-          break;
-        } else if (message is Event) {
-          _state = await handleTell(_state, message.payload);
-        } else if (message is Request) {
-          _state = await handleAsk(_state, message.payload, (m) => message.respond(Response<Resp>(message.id, m)));
-        } else {
-          await handleInfo(_state, message);
+  Future<void> run() => _runSafe(() async {
+        await for (final message in Rx.merge([_controlChannel.stream, _messageChannel.stream])) {
+          logger.finest("actor received message: $message");
+          if (message is Request && message.payload is Stop) {
+            await handleStop(_state);
+            _controlChannel.respond(message.id, Stopped());
+            break;
+          } else if (message is Request) {
+            _state = await handleAsk(_state, message.payload, (m) => _messageChannel.respond(message.id, m));
+          } else if (message is Event) {
+            _state = await handleTell(_state, message.payload);
+          } else {
+            await handleInfo(_state, message);
+          }
+          logger.finest("actor handled message");
         }
-        // ignore: avoid_catches_without_on_clauses
-      } catch (error, trace) {
-        onError(error, trace);
-        rethrow;
-      }
+        logger.finer("actor done");
+        _close();
+      });
+
+  Future<void> _runSafe(Future<void> Function() f) async {
+    try {
+      await f();
+      // ignore: avoid_catches_without_on_clauses
+    } catch (error, trace) {
+      onError(error, trace);
+      _close();
+      rethrow;
     }
   }
 
-  @internal
-  Future<void> init(void Function(State) publishState) async {
-    _publishState = publishState;
-    // Ensure that we populate the ValueStream by force publishing state after initialization even if it's the same as
-    // the initial state.
-    __state = await handleInit(_state);
-    _publishState(_state);
+  void _close() {
+    _stateSink.close();
+    _controlChannel.close();
+    _messageChannel.close();
   }
 
   @internal
-  Future<void> stop(Stop message) async {
-    await handleStop(_state);
-    message.respond();
-  }
+  Future<void> init(
+    ResponseChannel messageChannel,
+    ResponseChannel<ControlMessage, ControlResponse> controlChannel,
+    EventSink sink,
+  ) =>
+      _runSafe(() async {
+        _controlChannel = controlChannel;
+        _messageChannel = messageChannel;
+        _stateSink = sink;
+        // Ensure that we populate the state ValueStream
+        _stateSink.add(_state);
+        _state = await handleInit(_state);
+        controlChannel.send(InitComplete());
+      });
 
   @protected
   Future<State> handleTell(State state, Req message) async => state;

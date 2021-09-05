@@ -8,6 +8,7 @@ class CrashingActor extends Actor<Exception, void, void> {
   CrashingActor([this._initException]) : super(null);
 
   @override
+  // Logger get logger => PrintLogger(LogLevel.finer);
   Logger get logger => IgnoreLogger();
 
   @override

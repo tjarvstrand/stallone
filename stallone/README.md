@@ -9,7 +9,6 @@ WIP and very rough around the edges. Don't use unless you feel comfortable diggi
 Check back later...
 
 ## TODO
-- Use stream_channel
 - self reference
 - Supervision.
 - Allow passing ActorRefs across Isolates.
