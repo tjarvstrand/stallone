@@ -13,6 +13,7 @@ import 'isolate_actor_monitor.dart';
 Future<void> isolateMain(
   IsolateActorSpec spec,
 ) async {
+  print(spec);
   final actor = spec.actor;
   final messageResponsePort = ResponseChannel(IsolateChannel.connectSend(spec.messagePort));
   final controlPort = IsolateChannel.connectSend(spec.controlPort);
@@ -22,6 +23,9 @@ Future<void> isolateMain(
 
   await actor.run();
 }
+
+typedef IsolateSpawner<Req, Resp> = Future<Isolate> Function(
+    void Function(IsolateActorSpec<Req, Resp>), IsolateActorSpec<Req, Resp>);
 
 class IsolateActorSpec<Req, Resp> {
   final Actor<Req, Resp, dynamic> actor;
@@ -46,10 +50,8 @@ class IsolateActorRef<Req, Resp, State> extends ActorRef<Req, Resp, State> {
     this.state,
   );
 
-  static Future<IsolateActorRef<Req, Resp, State>> start<Req, Resp, State>(
-    Actor<Req, Resp, State> actor, [
-    bool awaitInit = true,
-  ]) async {
+  static Future<IsolateActorRef<Req, Resp, State>> start<Req, Resp, State>(Actor<Req, Resp, State> actor,
+      [bool awaitInit = true, IsolateSpawner? spawn]) async {
     final messagePort = ReceivePort();
     final messageChannel = RequestChannel<Req, Resp>(IsolateChannel.connectReceive(messagePort));
     final controlPort = ReceivePort();
@@ -67,7 +69,7 @@ class IsolateActorRef<Req, Resp, State> extends ActorRef<Req, Resp, State> {
         stateStream.close();
       });
 
-    final isolate = await Isolate.spawn(
+    final isolate = await (spawn ?? Isolate.spawn)(
       isolateMain,
       IsolateActorSpec<Req, Resp>(
         actor,

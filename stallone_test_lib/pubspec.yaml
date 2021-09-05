@@ -1,0 +1,12 @@
+name: stallone_test_lib
+description: Test utilities
+version: 0.1.0
+
+publish_to: none
+
+environment:
+  sdk: ">=2.13.0 <3.0.0"
+
+dependencies:
+  stallone:
+    path: ../stallone

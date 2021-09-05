@@ -13,4 +13,6 @@ dependencies:
   stream_channel: ^2.1.0
 
 dev_dependencies:
+  stallone_test_lib:
+    path: ../stallone_test_lib
   test:

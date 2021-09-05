@@ -1,10 +1,7 @@
 import 'package:stallone/src/actor_monitor.dart';
 import 'package:stallone/src/isolate_actor/isolate_actor_ref.dart';
+import 'package:stallone_test_lib/stallone_test_lib.dart';
 import 'package:test/test.dart';
-
-import 'actors/addition_actor.dart';
-import 'actors/crashing_actor.dart';
-import 'test_util.dart';
 
 void main() {
   test('Ask and tell work as expected', () async {

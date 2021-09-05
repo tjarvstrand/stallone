@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:stallone/src/logger.dart';
 import 'package:stallone/stallone.dart';
 
 class AdditionActor extends Actor<int, int, int> {
@@ -17,9 +16,9 @@ class AdditionActor extends Actor<int, int, int> {
   }
 
   @override
-  Future<int> handleAsk(int state, int message, void Function(int) respond) async {
-    logger.info("ask $message, state: $state");
-    final res = state + message;
+  Future<int> handleAsk(int state, int request, void Function(int) respond) async {
+    logger.info("ask $request, state: $state");
+    final res = state + request;
     respond(res);
     return res;
   }

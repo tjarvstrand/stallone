@@ -260,6 +260,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.10.0"
+  stallone_test_lib:
+    dependency: "direct dev"
+    description:
+      path: "../stallone_test_lib"
+      relative: true
+    source: path
+    version: "0.1.0"
   stream_channel:
     dependency: "direct main"
     description:
