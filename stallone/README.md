@@ -9,7 +9,7 @@ WIP and very rough around the edges. Don't use unless you feel comfortable diggi
 Check back later...
 
 ## TODO
-- self reference
+- prioritize control messages.
 - Supervision.
 - Allow passing ActorRefs across Isolates.
 - Combine request id with ref id/name to make sure that responses go to the right ref (eg. if the 

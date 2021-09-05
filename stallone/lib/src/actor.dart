@@ -37,6 +37,10 @@ abstract class Actor<Req, Resp, State> {
     if (oldState != _state) _stateSink.add(_state);
   }
 
+  final _selfController = StreamController<Req>();
+  @protected
+  EventSink<Req> get self => _selfController;
+
   @internal
   final Logger logger = PrintLogger();
 
@@ -44,7 +48,11 @@ abstract class Actor<Req, Resp, State> {
 
   @internal
   Future<void> run() => _runSafe(() async {
-        await for (final message in Rx.merge([_controlChannel.stream, _messageChannel.stream])) {
+        await for (final message in Rx.merge([
+          _controlChannel.stream,
+          _messageChannel.stream,
+          _selfController.stream.map((msg) => Event(msg)),
+        ])) {
           logger.finest("actor received message: $message");
           if (message is Request && message.payload is Stop) {
             await handleStop(_state);
@@ -55,7 +63,7 @@ abstract class Actor<Req, Resp, State> {
           } else if (message is Event) {
             _state = await handleTell(_state, message.payload);
           } else {
-            await handleInfo(_state, message);
+            await handleOther(_state, message);
           }
           logger.finest("actor handled message");
         }
@@ -78,6 +86,7 @@ abstract class Actor<Req, Resp, State> {
     _stateSink.close();
     _controlChannel.close();
     _messageChannel.close();
+    _selfController.close();
   }
 
   @internal
@@ -105,7 +114,7 @@ abstract class Actor<Req, Resp, State> {
   @protected
   Future<void> handleStop(State state) => Future.value(null);
   @protected
-  Future<void> handleInfo(State state, dynamic message) async =>
+  Future<void> handleOther(State state, dynamic message) async =>
       logger.warning("Received unsupported message type: ${message.runtimeType}");
 
   @protected
