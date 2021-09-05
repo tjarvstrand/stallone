@@ -1,0 +1,23 @@
+name: flutter_stallone
+description: Yet another actor implementation for Flutter.
+version: 0.1.0
+homepage:
+
+environment:
+  sdk: ">=2.12.0 <3.0.0"
+  flutter: ">=2.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_isolate: ">= 2.0.0"
+  meta:
+  pedantic: # Deprecated, but used for unawaited until we get dart 2.14 FutureExtensions
+  stallone:
+    path: ../stallone
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  stallone_test_lib:
+    path: ../stallone_test_lib

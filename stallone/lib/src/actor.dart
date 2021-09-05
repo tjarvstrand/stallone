@@ -100,7 +100,7 @@ abstract class Actor<Req, Resp, State> {
         controlChannel.send(InitComplete());
       });
 
-  // Sends a low priority stop message.
+  @nonVirtual
   void stop() => _mailbox.addControl(Stop());
 
   @protected
