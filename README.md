@@ -5,11 +5,4 @@ Yet another actor implementation. Inspired by Akka and Erlang/OTP.
 Very much a WIP and very rough around the edges. Don't try to use unless you
 feel comfortable digging through the code.
 
-## Getting Started
-
-Check back later...
-
-## TODO
-- Supervision
-- Allow passing ActorRefs across Isolates
-- Basically everything...
+Check individual package READMEs for more information.
