@@ -13,7 +13,6 @@ import 'isolate_actor_monitor.dart';
 Future<void> isolateMain(
   IsolateActorSpec spec,
 ) async {
-  print(spec);
   final actor = spec.actor;
   final messageResponsePort = ResponseChannel(IsolateChannel.connectSend(spec.messagePort));
   final controlPort = IsolateChannel.connectSend(spec.controlPort);

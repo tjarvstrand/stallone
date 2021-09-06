@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:stallone/src/logger.dart';
 import 'package:stallone/stallone.dart';
 
 class CrashingActor extends Actor<Exception, void, void> {
@@ -12,7 +11,7 @@ class CrashingActor extends Actor<Exception, void, void> {
   Logger get logger => IgnoreLogger();
 
   @override
-  Future<void> handleInit(void _) {
+  Future<void> handleInit(void state) {
     final ex = _initException;
     if (ex != null) throw ex;
     return Future.value(null);
@@ -22,5 +21,5 @@ class CrashingActor extends Actor<Exception, void, void> {
   Future<void> handleTell(void state, Exception message) => throw message;
 
   @override
-  Future<void> handleAsk(void state, Exception message, void Function(void) respond) => throw message;
+  Future<void> handleAsk(void state, Exception request, void Function(void) respond) => throw request;
 }

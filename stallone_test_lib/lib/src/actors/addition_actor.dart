@@ -6,8 +6,8 @@ class AdditionActor extends Actor<int, int, int> {
   AdditionActor([int initial = 0]) : super(initial);
 
   @override
-  Logger get logger => PrintLogger(LogLevel.finest);
-  // Logger get logger => IgnoreLogger();
+  // Logger get logger => PrintLogger(LogLevel.finest);
+  Logger get logger => IgnoreLogger();
 
   @override
   Future<int> handleTell(int state, int message) async {

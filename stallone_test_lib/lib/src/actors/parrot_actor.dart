@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:stallone/src/logger.dart';
 import 'package:stallone/stallone.dart';
 
 class ParrotActor extends Actor {
@@ -13,8 +12,8 @@ class ParrotActor extends Actor {
   Future handleTell(dynamic state, dynamic message) => Future.value(message);
 
   @override
-  Future handleAsk(dynamic state, dynamic message, void Function(dynamic) respond) async {
-    respond(message);
-    return message;
+  Future handleAsk(dynamic state, dynamic request, void Function(dynamic) respond) async {
+    respond(request);
+    return request;
   }
 }

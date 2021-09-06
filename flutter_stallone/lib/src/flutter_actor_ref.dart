@@ -4,12 +4,12 @@ import 'package:flutter_isolate/flutter_isolate.dart';
 import 'package:stallone/stallone.dart';
 
 class _IsolateWrapper extends Isolate {
-  final FlutterIsolate _inner;
-  _IsolateWrapper(this._inner)
+  final FlutterIsolate inner;
+  _IsolateWrapper(this.inner)
       : super(
-          _inner.controlPort!,
-          pauseCapability: _inner.pauseCapability!,
-          terminateCapability: _inner.terminateCapability!,
+          inner.controlPort!,
+          pauseCapability: inner.pauseCapability!,
+          terminateCapability: inner.terminateCapability!,
         );
 }
 
