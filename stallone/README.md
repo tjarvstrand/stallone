@@ -10,6 +10,7 @@ feel comfortable digging through the code.
 Check back later...
 
 ## TODO
+- Rename Actor and break out a new Actor class that is more of a basic building block
 - Supervision
 - Allow passing ActorRefs across Isolates
 - Basically everything...

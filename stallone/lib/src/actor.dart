@@ -21,23 +21,29 @@ abstract class Actor<Req, Resp, State> {
   late ResponseChannel _messageChannel;
   late ResponseChannel<ControlMessage, ControlResponse> _controlChannel;
   late EventSink _stateSink;
-  State __state;
-  State get _state => __state;
-  set _state(State newState) {
-    final oldState = _state;
-    __state = newState;
-    if (oldState != _state) _stateSink.add(_state);
+  State _state;
+
+  @protected
+  State get state => _state;
+
+  @protected
+  set state(State newState) {
+    final oldState = state;
+    _state = newState;
+    if (oldState != state) _stateSink.add(state);
   }
 
   @protected
-  void self(Req request) => _mailbox.addOther(Event(request));
+  void self(dynamic message) => _mailbox.addOther(Event(message));
 
   @internal
   final Logger logger = PrintLogger();
 
   late MailBox _mailbox;
+  @protected
+  MailBox createMailBox(Stream control, Stream messages) => DefaultMailBox(control, messages);
 
-  Actor(this.__state);
+  Actor(this._state);
 
   @internal
   Future<void> run() => _runSafe(() async {
@@ -45,15 +51,15 @@ abstract class Actor<Req, Resp, State> {
           final message = await _mailbox.next;
           logger.finest("actor received message: $message");
           if (message is Request && message.payload is Stop) {
-            await handleStop(_state);
+            await handleStop();
             _controlChannel.respond(message.id, Stopped());
             return false;
           } else if (message is Request) {
-            _state = await handleAsk(_state, message.payload, (m) => _messageChannel.respond(message.id, m));
+            await handleAsk(message.payload, (m) => _messageChannel.respond(message.id, m));
           } else if (message is Event) {
-            _state = await handleTell(_state, message.payload);
+            await handleTell(message.payload);
           } else {
-            await handleOther(_state, message);
+            await handleOther(message);
           }
           logger.finest("actor handled message");
           return true;
@@ -90,13 +96,13 @@ abstract class Actor<Req, Resp, State> {
         _controlChannel = controlChannel;
         _messageChannel = messageChannel;
         _stateSink = sink;
-        _mailbox = DefaultMailBox(
+        _mailbox = createMailBox(
           _controlChannel.stream,
           _messageChannel.stream,
         );
         // Ensure that we populate the state ValueStream
-        _stateSink.add(_state);
-        _state = await handleInit(_state);
+        _stateSink.add(state);
+        await handleInit();
         controlChannel.send(InitComplete());
       });
 
@@ -104,16 +110,17 @@ abstract class Actor<Req, Resp, State> {
   void stop() => _mailbox.addControl(Stop());
 
   @protected
-  Future<State> handleTell(State state, Req message) async => state;
+  Future<void> handleTell(Req message) async => state;
   @protected
-  Future<State> handleAsk(State state, Req request, void Function(Resp) respond) => Future.value(state);
+  Future<void> handleAsk(Req request, void Function(Resp) respond) => Future.value(null);
   @protected
-  Future<State> handleInit(State state) => Future.value(state);
+  Future<void> handleInit() => Future.value(null);
   @protected
-  Future<void> handleStop(State state) => Future.value(null);
+  Future<void> handleStop() => Future.value(null);
   @protected
-  Future<void> handleOther(State state, dynamic message) async =>
-      logger.warning("Received unsupported message type: ${message.runtimeType}");
+  Future<void> handleOther(dynamic message) async {
+    logger.warning("Received unsupported message type: ${message.runtimeType}");
+  }
 
   @protected
   void onError(dynamic error, StackTrace? stacktrace) {

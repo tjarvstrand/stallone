@@ -57,8 +57,8 @@ class LocalActorRef<Req, Resp, State> extends ActorRef<Req, Resp, State> {
 
   @override
   Future<void> stop() async {
-    await _messageChannel.close();
     await _controlChannel.request(Stop());
+    await _messageChannel.close();
     await _controlChannel.close();
     await _completer.future;
   }

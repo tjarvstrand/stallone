@@ -1,3 +1,5 @@
+![travis](https://app.travis-ci.com/tjarvstrand/stallone.svg?branch=main)
+
 # Stallone
 
 Yet another actor implementation. Inspired by Akka and Erlang/OTP.

@@ -10,16 +10,16 @@ class AdditionActor extends Actor<int, int, int> {
   Logger get logger => IgnoreLogger();
 
   @override
-  Future<int> handleTell(int state, int message) async {
+  Future<void> handleTell(int message) async {
     logger.info("tell $message, state: $state");
-    return message;
+    state = message;
   }
 
   @override
-  Future<int> handleAsk(int state, int request, void Function(int) respond) async {
+  Future<void> handleAsk(int request, void Function(int) respond) async {
     logger.info("ask $request, state: $state");
     final res = state + request;
     respond(res);
-    return res;
+    state = res;
   }
 }

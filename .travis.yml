@@ -8,6 +8,6 @@ dart:
   - stable
 
 script:
-  - dart analyze --fatal-warnings --fatal-lints stallone/lib stallone/test/ flutter_stallone/lib flutter_stallone/test/ stallone_test_lib/lib
+  - dart analyze --fatal-warnings --fatal-infos stallone/lib stallone/test/ flutter_stallone/lib flutter_stallone/test/ stallone_test_lib/lib
   - (cd stallone; dart pub get && dart test)
   - dartfmt -n --set-exit-if-changed lib/ test/

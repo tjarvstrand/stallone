@@ -11,15 +11,15 @@ class CrashingActor extends Actor<Exception, void, void> {
   Logger get logger => IgnoreLogger();
 
   @override
-  Future<void> handleInit(void state) {
+  Future<void> handleInit() {
     final ex = _initException;
     if (ex != null) throw ex;
     return Future.value(null);
   }
 
   @override
-  Future<void> handleTell(void state, Exception message) => throw message;
+  Future<void> handleTell(Exception message) => throw message;
 
   @override
-  Future<void> handleAsk(void state, Exception request, void Function(void) respond) => throw request;
+  Future<void> handleAsk(Exception request, void Function(void) respond) => throw request;
 }

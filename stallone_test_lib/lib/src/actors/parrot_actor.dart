@@ -9,10 +9,10 @@ class ParrotActor extends Actor {
   Logger get logger => IgnoreLogger();
 
   @override
-  Future handleTell(dynamic state, dynamic message) => Future.value(message);
+  Future<void> handleTell(dynamic message) => Future.value(message);
 
   @override
-  Future handleAsk(dynamic state, dynamic request, void Function(dynamic) respond) async {
+  Future<void> handleAsk(dynamic request, void Function(dynamic) respond) async {
     respond(request);
     return request;
   }
